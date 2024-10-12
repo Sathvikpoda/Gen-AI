@@ -1,7 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-import re
 
 def load_and_process_data(file_path):
     """Loads and processes the smartphone dataset."""
@@ -37,37 +36,62 @@ def find_best_phone_in_category(top_5_smartphones, category):
     return best_phone['Title'], best_phone[category]
 
 def display_phone_bar_chart(top_5_smartphones, spec):
-    """Displays a bar chart comparing phones based on the specified specification."""
+    """Displays a bar chart to compare the top 5 smartphones based on the specified specification."""
     if spec not in top_5_smartphones.columns:
         print(f"Specification '{spec}' not found in the dataset.")
         return
 
     # Sort phones based on the specification
     if spec.lower() == 'price':
-        sorted_phones = top_5_smartphones.sort_values(spec)
+        sorted_phones = top_5_smartphones.sort_values(spec, ascending=True)
     else:
         sorted_phones = top_5_smartphones.sort_values(spec, ascending=False)
 
-    # Plotting the bar chart
-    plt.figure(figsize=(10, 6))
-    bars = plt.bar(sorted_phones['Title'], sorted_phones[spec], color='blue')
+    # Create a figure and axis
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    # Plot the bar chart
+    bars = ax.bar(sorted_phones['Title'], sorted_phones[spec], color='blue')
 
     # Highlight the best phone
-    if spec.lower() == 'price':
-        best_index = sorted_phones[spec].idxmin()
-    else:
-        best_index = sorted_phones[spec].idxmax()
-    
-    for bar in bars:
-        if bar.get_x() == best_index:
-            bar.set_color('red')
+    bars[0].set_color('red')
 
+    # Add value labels on the top of each bar
+    for bar in bars:
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2, height, 
+                f'{height:.2f}' if spec.lower() != 'reviews' else f'{height:.0f}', 
+                ha='center', va='bottom', fontsize=10, fontweight='bold')
+
+    # Customize the plot
     plt.title(f"Phone Comparison by {spec}")
     plt.xlabel("Smartphones")
     plt.ylabel(spec)
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
+
+    # Remove top and right spines
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    # Show the plot
     plt.show()
+
+    # Print all values and suggest the best phone
+    print(f"\n{spec} for all phones in the top 5:")
+    for index, row in sorted_phones.iterrows():
+        print(f"{row['Title']}: {row[spec]}")
+    
+    best_phone = sorted_phones.iloc[0]
+    if spec.lower() == 'price':
+        print(f"\nBased on {spec}, the best phone among the top 5 is: {best_phone['Title']}")
+        print(f"It has the lowest price of ₹{best_phone[spec]:,.2f}")
+    elif spec.lower() == 'rating':
+        print(f"\nBased on {spec}, the best phone among the top 5 is: {best_phone['Title']}")
+        print(f"It has the highest rating of {best_phone[spec]}")
+    elif spec.lower() == 'reviews':
+        print(f"\nBased on {spec}, the best phone among the top 5 is: {best_phone['Title']}")
+        print(f"It has the highest number of reviews: {best_phone[spec]:,.0f}")
 
 def display_overall_best_phone_bar_chart(top_5_smartphones):
     """Displays the overall best phone by combining scores from all categories using a bar chart."""
@@ -114,16 +138,18 @@ for i, spec in enumerate(specs):
     print(f"{i+1}. {spec}")
 
 while True:
-    user_input = input("\nEnter the specification you want to compare, or 'exit' to quit: ")
+    user_input = input("\nEnter the specification you want to compare (Rating, Reviews, Price), or 'exit' to quit: ")
     
     if user_input.lower() == 'exit':
         print("Thank you for using our smartphone recommender. Goodbye!")
         break
     
-    if user_input.lower() in [spec.lower() for spec in specs]:
-        spec = next(spec for spec in specs if spec.lower() == user_input.lower())
+    if user_input.lower() in ['rating', 'reviews', 'price']:
+        spec = user_input.capitalize()
         display_phone_bar_chart(top_5_smartphones, spec)
-    elif user_input.lower() == 'all':
-        display_overall_best_phone_bar_chart(top_5_smartphones)
+        
+        # Find the best phone among all smartphones for the chosen specification
+        best_phone, best_value = find_best_phone_in_category(df, spec)
+        print(f"\nThe best phone among all smartphones for {spec} is: {best_phone} with a {spec.lower()} of {best_value}")
     else:
-        print("Invalid specification. Please choose from the list of available specifications.")
+        print("Invalid specification. Please choose from Rating, Reviews, or Price.")
